@@ -11,9 +11,9 @@
  * the License for the specific language governing permissions and limitations under the License.
  */
 
-package com.jakewharton.rxrelay2;
+package com.jakewharton.rxrelay3;
 
-import io.reactivex.functions.Predicate;
+import io.reactivex.rxjava3.functions.Predicate;
 
 /**
  * A linked-array-list implementation that only supports appending and consumption.
@@ -88,7 +88,7 @@ class AppendOnlyLinkedArrayList<T> {
     }
 
     @SuppressWarnings("unchecked")
-    boolean accept(Relay<? super T> observer) {
+    void accept(Relay<? super T> observer) {
         Object[] a = head;
         final int c = capacity;
         while (a != null) {
@@ -102,6 +102,5 @@ class AppendOnlyLinkedArrayList<T> {
             }
             a = (Object[])a[c];
         }
-        return false;
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright 2016 Netflix, Inc.
+ * Copyright (c) 2016-present, RxJava Contributors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in
  * compliance with the License. You may obtain a copy of the License at
@@ -11,11 +11,14 @@
  * the License for the specific language governing permissions and limitations under the License.
  */
 
-package com.jakewharton.rxrelay2;
+package com.jakewharton.rxrelay3;
 
-import com.jakewharton.rxrelay2.AppendOnlyLinkedArrayList.NonThrowingPredicate;
-import io.reactivex.Observer;
-import io.reactivex.disposables.Disposable;
+import com.jakewharton.rxrelay3.AppendOnlyLinkedArrayList.NonThrowingPredicate;
+import io.reactivex.rxjava3.core.Observer;
+import io.reactivex.rxjava3.annotations.CheckReturnValue;
+import io.reactivex.rxjava3.annotations.NonNull;
+import io.reactivex.rxjava3.annotations.Nullable;
+import io.reactivex.rxjava3.disposables.Disposable;
 import java.lang.reflect.Array;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
@@ -55,19 +58,21 @@ public final class BehaviorRelay<T> extends Relay<T> {
 
     final AtomicReference<T> value;
 
-    private final AtomicReference<BehaviorDisposable<T>[]> subscribers;
+    final AtomicReference<BehaviorDisposable<T>[]> subscribers;
 
     @SuppressWarnings("rawtypes")
-    private static final BehaviorDisposable[] EMPTY = new BehaviorDisposable[0];
+    static final BehaviorDisposable[] EMPTY = new BehaviorDisposable[0];
 
     final Lock readLock;
-    private final Lock writeLock;
+    final Lock writeLock;
 
     long index;
 
     /**
      * Creates a {@link BehaviorRelay} without a default item.
      */
+    @CheckReturnValue
+    @NonNull
     public static <T> BehaviorRelay<T> create() {
         return new BehaviorRelay<T>();
     }
@@ -80,14 +85,17 @@ public final class BehaviorRelay<T> extends Relay<T> {
      *            the item that will be emitted first to any {@link Observer} as long as the
      *            {@link BehaviorRelay} has not yet observed any items from its source {@code Observable}
      */
-    public static <T> BehaviorRelay<T> createDefault(T defaultValue) {
+    @CheckReturnValue
+    @NonNull
+    public static <T> BehaviorRelay<T> createDefault(@NonNull T defaultValue) {
         return new BehaviorRelay<T>(defaultValue);
     }
 
     /**
      * Constructs an empty BehaviorRelay.
      */
-    @SuppressWarnings("unchecked") private BehaviorRelay() {
+    @SuppressWarnings("unchecked")
+    BehaviorRelay() {
         ReadWriteLock lock = new ReentrantReadWriteLock();
         this.readLock = lock.readLock();
         this.writeLock = lock.writeLock();
@@ -100,7 +108,7 @@ public final class BehaviorRelay<T> extends Relay<T> {
      * @param defaultValue the initial value, not null (verified)
      * @throws NullPointerException if {@code defaultValue} is null
      */
-    private BehaviorRelay(T defaultValue) {
+    BehaviorRelay(@NonNull T defaultValue) {
         this();
         if (defaultValue == null) throw new NullPointerException("defaultValue == null");
         value.lazySet(defaultValue);
@@ -119,7 +127,7 @@ public final class BehaviorRelay<T> extends Relay<T> {
     }
 
     @Override
-    public void accept(T value) {
+    public void accept(@NonNull T value) {
         if (value == null) throw new NullPointerException("value == null");
 
         setCurrent(value);
@@ -141,6 +149,7 @@ public final class BehaviorRelay<T> extends Relay<T> {
      * Returns a single value the Relay currently has or null if no such value exists.
      * <p>The method is thread-safe.
      */
+    @Nullable
     public T getValue() {
         return value.get();
     }
@@ -148,7 +157,9 @@ public final class BehaviorRelay<T> extends Relay<T> {
     /**
      * Returns an Object array containing snapshot all values of the Relay.
      * <p>The method is thread-safe.
+     * @deprecated in 2.1; put the result of {@link #getValue()} into an array manually, will be removed in 3.x
      */
+    @Deprecated
     public Object[] getValues() {
         @SuppressWarnings("unchecked")
         T[] a = (T[])EMPTY_ARRAY;
@@ -166,7 +177,9 @@ public final class BehaviorRelay<T> extends Relay<T> {
      * after the last value to null (if the capacity permits).
      * <p>The method is thread-safe.
      * @param array the target array to copy values into if it fits
+     * @deprecated in 2.1; put the result of {@link #getValue()} into an array manually, will be removed in 3.x
      */
+    @Deprecated
     @SuppressWarnings("unchecked")
     public T[] getValues(T[] array) {
         T o = value.get();
@@ -197,7 +210,7 @@ public final class BehaviorRelay<T> extends Relay<T> {
         return value.get() != null;
     }
 
-    private void add(BehaviorDisposable<T> rs) {
+    void add(BehaviorDisposable<T> rs) {
         for (;;) {
             BehaviorDisposable<T>[] a = subscribers.get();
             int len = a.length;
@@ -215,10 +228,10 @@ public final class BehaviorRelay<T> extends Relay<T> {
     void remove(BehaviorDisposable<T> rs) {
         for (;;) {
             BehaviorDisposable<T>[] a = subscribers.get();
-            if (a == EMPTY) {
+            int len = a.length;
+            if (len == 0) {
                 return;
             }
-            int len = a.length;
             int j = -1;
             for (int i = 0; i < len; i++) {
                 if (a[i] == rs) {
@@ -244,19 +257,16 @@ public final class BehaviorRelay<T> extends Relay<T> {
         }
     }
 
-    private void setCurrent(T current) {
+    void setCurrent(@NonNull T o) {
         writeLock.lock();
-        try {
-            index++;
-            value.lazySet(current);
-        } finally {
-            writeLock.unlock();
-        }
+        index++;
+        value.lazySet(o);
+        writeLock.unlock();
     }
 
     static final class BehaviorDisposable<T> implements Disposable, NonThrowingPredicate<T> {
 
-        final Observer<? super T> actual;
+        final Observer<? super T> downstream;
         final BehaviorRelay<T> state;
 
         boolean next;
@@ -270,7 +280,7 @@ public final class BehaviorRelay<T> extends Relay<T> {
         long index;
 
         BehaviorDisposable(Observer<? super T> actual, BehaviorRelay<T> state) {
-            this.actual = actual;
+            this.downstream = actual;
             this.state = state;
         }
 
@@ -351,7 +361,7 @@ public final class BehaviorRelay<T> extends Relay<T> {
         @Override
         public boolean test(T o) {
             if (!cancelled) {
-                actual.onNext(o);
+                downstream.onNext(o);
             }
             return false;
         }

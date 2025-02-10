@@ -11,16 +11,16 @@
  * the License for the specific language governing permissions and limitations under the License.
  */
 
-package com.jakewharton.rxrelay2;
+package com.jakewharton.rxrelay3;
 
-import io.reactivex.Observable;
-import io.reactivex.Observer;
-import io.reactivex.disposables.Disposable;
-import io.reactivex.functions.Function;
-import io.reactivex.observers.DefaultObserver;
-import io.reactivex.observers.TestObserver;
-import io.reactivex.schedulers.Schedulers;
-import io.reactivex.schedulers.TestScheduler;
+import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.Observer;
+import io.reactivex.rxjava3.disposables.Disposable;
+import io.reactivex.rxjava3.functions.Function;
+import io.reactivex.rxjava3.observers.DefaultObserver;
+import io.reactivex.rxjava3.observers.TestObserver;
+import io.reactivex.rxjava3.schedulers.Schedulers;
+import io.reactivex.rxjava3.schedulers.TestScheduler;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import org.junit.Test;
@@ -194,9 +194,11 @@ public class ReplayRelayTest {
 
         for (int i = 0; i < 1000; i++) {
             rs.accept(i);
-            ts.advanceTimeBy(2, TimeUnit.SECONDS);
             assertEquals(1, rs.size());
             assertTrue(rs.hasValue());
+            ts.advanceTimeBy(2, TimeUnit.SECONDS);
+            assertEquals(0, rs.size());
+            assertFalse(rs.hasValue());
         }
     }
     @Test
@@ -226,6 +228,7 @@ public class ReplayRelayTest {
 
     }
 
+    @Test
     public void createInvalidCapacity() {
         try {
             ReplayRelay.create(-99);
@@ -265,7 +268,7 @@ public class ReplayRelayTest {
 
         assertTrue(rp.hasObservers());
 
-        ts.cancel();
+        ts.dispose();
 
         assertFalse(rp.hasObservers());
     }
@@ -347,7 +350,7 @@ public class ReplayRelayTest {
             Runnable r2 = new Runnable() {
                 @Override
                 public void run() {
-                    ts.cancel();
+                    ts.dispose();
                 }
             };
 
@@ -362,6 +365,7 @@ public class ReplayRelayTest {
 
             Runnable r1 = new Runnable() {
                 @Override
+                @SuppressWarnings("CheckReturnValue")
                 public void run() {
                     rp.test();
                 }
@@ -372,6 +376,7 @@ public class ReplayRelayTest {
     }
 
     @Test
+    @SuppressWarnings("CheckReturnValue")
     public void cancelUpfront() {
         ReplayRelay<Integer> rp = ReplayRelay.create();
         rp.test();
@@ -395,14 +400,14 @@ public class ReplayRelayTest {
             Runnable r1 = new Runnable() {
                 @Override
                 public void run() {
-                    ts1.cancel();
+                    ts1.dispose();
                 }
             };
 
             Runnable r2 = new Runnable() {
                 @Override
                 public void run() {
-                    ts2.cancel();
+                    ts2.dispose();
                 }
             };
 
@@ -491,5 +496,72 @@ public class ReplayRelayTest {
 
         TestHelper.checkDisposed(
             ReplayRelay.createWithTimeAndSize(1, TimeUnit.SECONDS, Schedulers.single(), 10));
+    }
+
+    @Test
+    public void timeAndSizeNoTerminalTruncationOnTimechange() {
+        ReplayRelay<Integer> rs = ReplayRelay.createWithTimeAndSize(1, TimeUnit.SECONDS, new TimesteppingScheduler(), 1);
+
+        TestObserver<Integer> to = rs.test();
+
+        rs.accept(1);
+        rs.cleanupBuffer();
+
+        to.assertNoErrors();
+    }
+
+    @Test
+    public void timeAndSizeNoTerminalTruncationOnTimechange2() {
+        ReplayRelay<Integer> rs = ReplayRelay.createWithTimeAndSize(1, TimeUnit.SECONDS, new TimesteppingScheduler(), 1);
+
+        TestObserver<Integer> to = rs.test();
+
+        rs.accept(1);
+        rs.cleanupBuffer();
+        rs.accept(2);
+        rs.cleanupBuffer();
+
+        to.assertNoErrors();
+    }
+
+    @Test
+    public void timeAndSizeNoTerminalTruncationOnTimechange3() {
+        ReplayRelay<Integer> rs = ReplayRelay.createWithTimeAndSize(1, TimeUnit.SECONDS, new TimesteppingScheduler(), 1);
+
+        TestObserver<Integer> to = rs.test();
+
+        rs.accept(1);
+        rs.accept(2);
+
+        to.assertNoErrors();
+    }
+
+    @Test
+    public void timeAndSizeNoTerminalTruncationOnTimechange4() {
+        ReplayRelay<Integer> rs = ReplayRelay.createWithTimeAndSize(1, TimeUnit.SECONDS, new TimesteppingScheduler(), 10);
+
+        TestObserver<Integer> to = rs.test();
+
+        rs.accept(1);
+        rs.accept(2);
+
+        to.assertNoErrors();
+    }
+
+    @Test
+    public void timeAndSizeRemoveCorrectNumberOfOld() {
+        TestScheduler scheduler = new TestScheduler();
+        ReplayRelay<Integer> rs = ReplayRelay.createWithTimeAndSize(1, TimeUnit.SECONDS, scheduler, 2);
+
+        rs.accept(1);
+        rs.accept(2);
+        rs.accept(3); // remove 1 due to maxSize, size == 2
+
+        scheduler.advanceTimeBy(2, TimeUnit.SECONDS);
+
+        rs.accept(4); // remove 2 due to maxSize, remove 3 due to age, size == 1
+        rs.accept(5); // size == 2
+
+        rs.test().assertValuesOnly(4, 5);
     }
 }

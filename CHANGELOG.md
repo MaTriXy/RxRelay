@@ -1,6 +1,34 @@
 Change Log
 ==========
 
+Version 3.0.1 *(2021-07-22)*
+----------------------------
+
+ * Fix: Change `BehaviorRelay#getValue` return type to be non-nullable.
+ * Add more nullability annotations to public API surface.
+
+
+Version 3.0.0 *(2020-05-19)*
+----------------------------
+
+This version updates to support RxJava 3. No functional changes.
+
+The groupId and package name are now `com.jakewharton.rxrelay3`.
+
+
+Version 2.1.1 *(2019-08-23)*
+----------------------------
+
+ * Fix: Prevent occasional NPE from ReplayRelay due to logic error.
+
+
+Version 2.1.0 *(2018-09-22)*
+----------------------------
+
+ * New: Minor updates to implementation to match RxJava 2.2.2.
+ * Fix: Add nullability annotations to all public methods and `@CheckReturnValue` where appropriate.
+
+
 Version 2.0.0 *(2016-11-29)*
 ----------------------------
 

@@ -11,10 +11,12 @@
  * the License for the specific language governing permissions and limitations under the License.
  */
 
-package com.jakewharton.rxrelay2;
+package com.jakewharton.rxrelay3;
 
-import io.reactivex.Observable;
-import io.reactivex.functions.Consumer;
+import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.annotations.CheckReturnValue;
+import io.reactivex.rxjava3.annotations.NonNull;
+import io.reactivex.rxjava3.functions.Consumer;
 
 /**
  * Represents a Consumer and an Observable at the same time, allowing
@@ -26,7 +28,7 @@ import io.reactivex.functions.Consumer;
  */
 public abstract class Relay<T> extends Observable<T> implements Consumer<T> {
     /** {@inheritDoc} */
-    @Override public abstract void accept(T value); // Redeclare without checked exception.
+    @Override public abstract void accept(@NonNull T value); // Redeclare without checked exception.
 
     /**
      * Returns true if the subject has any Observers.
@@ -38,6 +40,8 @@ public abstract class Relay<T> extends Observable<T> implements Consumer<T> {
      * Wraps this Relay and serializes the calls to {@link #accept}, making it thread-safe.
      * <p>The method is thread-safe.
      */
+    @NonNull
+    @CheckReturnValue
     public final Relay<T> toSerialized() {
         if (this instanceof SerializedRelay) {
             return this;

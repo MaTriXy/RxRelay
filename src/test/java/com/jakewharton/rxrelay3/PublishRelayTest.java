@@ -11,16 +11,16 @@
  * the License for the specific language governing permissions and limitations under the License.
  */
 
-package com.jakewharton.rxrelay2;
+package com.jakewharton.rxrelay3;
 
-import io.reactivex.Observable;
-import io.reactivex.Observer;
-import io.reactivex.disposables.Disposable;
-import io.reactivex.functions.Consumer;
-import io.reactivex.functions.Function;
-import io.reactivex.observers.DefaultObserver;
-import io.reactivex.observers.TestObserver;
-import io.reactivex.schedulers.Schedulers;
+import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.Observer;
+import io.reactivex.rxjava3.disposables.Disposable;
+import io.reactivex.rxjava3.functions.Consumer;
+import io.reactivex.rxjava3.functions.Function;
+import io.reactivex.rxjava3.observers.DefaultObserver;
+import io.reactivex.rxjava3.observers.TestObserver;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Test;
@@ -39,6 +39,7 @@ import static org.mockito.Mockito.verify;
 public class PublishRelayTest {
 
     @Test
+    @SuppressWarnings("CheckReturnValue")
     public void testNestedSubscribe() {
         final PublishRelay<Integer> s = PublishRelay.create();
 
@@ -177,7 +178,7 @@ public class PublishRelayTest {
             @Override
             public void onNext(Integer t) {
                 super.onNext(t);
-                ts1.cancel();
+                ts1.dispose();
             }
         };
 
@@ -224,7 +225,7 @@ public class PublishRelayTest {
 
         });
 
-        ts.cancel();
+        ts.dispose();
 
         assertFalse(pp.hasObservers());
     }
@@ -246,7 +247,7 @@ public class PublishRelayTest {
             Runnable r2 = new Runnable() {
                 @Override
                 public void run() {
-                    ts.cancel();
+                    ts.dispose();
                 }
             };
 
@@ -271,6 +272,7 @@ public class PublishRelayTest {
     }
 
     @Test
+    @SuppressWarnings("CheckReturnValue")
     public void subscribedTo() {
         PublishRelay<Integer> pp = PublishRelay.create();
         PublishRelay<Integer> pp2 = PublishRelay.create();
